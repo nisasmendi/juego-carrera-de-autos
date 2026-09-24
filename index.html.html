@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carrera de Números - Desafío de Probabilidad</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Google Fonts: Fredoka para un look lúdico e intuitivo -->
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    * { font-family: 'Fredoka', sans-serif; }
+    
+    .dice-roll { animation: diceShake 0.6s cubic-bezier(.36,.07,.19,.97) both; }
+    @keyframes diceShake {
+      0%, 100% { transform: rotate(0deg) scale(1); }
+      15% { transform: rotate(-18deg) scale(1.15); }
+      30% { transform: rotate(15deg) scale(1.2); }
+      45% { transform: rotate(-12deg) scale(1.15); }
+      60% { transform: rotate(10deg) scale(1.1); }
+      75% { transform: rotate(-5deg) scale(1.05); }
+    }
+    
+    /* Celdas que simulan asfalto en modo oscuro */
+    .asphalt-dark {
+      background-color: #1e293b;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 0);
+      background-size: 8px 8px;
+    }
+    
+    /* Celdas que simulan asfalto en modo claro */
+    .asphalt-light {
+      background-color: #cbd5e1;
+      background-image: radial-gradient(rgba(0, 0, 0, 0.08) 1px, transparent 0);
+      background-size: 8px 8px;
+    }
+    
+    /* Estilo de la meta */
+    .finish-line {
+      background-color: #f8fafc;
+      background-image: linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000), 
+                        linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000);
+      background-size: 10px 10px;
+      background-position: 0 0, 5px 5px;
+    }
+
+    /* Animación del auto deslizándose suavemente */
+    .car-marker {
+      font-size: 1.8rem;
+      filter: drop-shadow(0px 3px 4px rgba(0,0,0,0.35));
+      animation: carWobble 0.6s ease-in-out infinite alternate;
+      z-index: 20;
+      transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+    @keyframes carWobble {
+      0% { transform: translateY(0) rotate(-1deg); }
+      100% { transform: translateY(-3px) rotate(2deg); }
+    }
+
+    /* Estilo del scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body id="app-body" class="min-h-screen text-slate-100 flex flex-col bg-slate-950 transition-colors duration-300">
+
+  <!-- Lienzo de Confeti para la victoria -->
+  <canvas id="confetti-canvas" class="pointer-events-none fixed inset-0 w-full h-full z-50"></canvas>
+
+  <!-- Header / Barra de Navegación -->
+  <header id="app-header" class="bg-slate-900 border-b border-slate-800 text-white shadow-xl px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 transition-colors duration-300">
+    <div class="flex items-center gap-3">
+      <div class="bg-indigo-600 text-white p-2.5 rounded-xl shadow-lg shadow-indigo-500/30 animate-pulse">
+        <i data-lucide="zap" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">Gran Carrera de Autos</h1>
+        <p class="text-xs text-slate-400" id="header-sub">¿Es cuestión de suerte, o de matemática?</p>
+      </div>
+    </div>
+    
+    <!-- Controles de volumen, luces y pestañas -->
+    <div class="flex items-center gap-3">
+      <!-- Interruptor de Luces (Tema) -->
+      <button onclick="toggleTheme()" id="theme-btn" class="p-2 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-xl transition flex items-center justify-center border border-slate-700 shadow-md" title="Alternar Modo Claro / Modo Oscuro">
+        <i id="theme-icon" data-lucide="sun" class="w-5 h-5"></i>
+      </button>
+
+      <!-- Interruptor de Sonido -->
+      <button onclick="toggleMute()" id="mute-btn" class="p-2 bg-slate-800 hover:bg-slate-700 text-indigo-400 rounded-xl transition flex items-center justify-center border border-slate-700 shadow-md" title="Silenciar/Activar Sonidos">
+        <i id="mute-icon" data-lucide="volume-2" class="w-5 h-5"></i>
+      </button>
+
+      <!-- Pestañas de Navegación -->
+      <nav id="app-tabs-nav" class="flex bg-slate-950 p-1 rounded-full text-sm border border-slate-800">
+        <button id="tab-game" onclick="switchTab('game')" class="px-4 py-1.5 rounded-full font-medium transition bg-indigo-600 text-white shadow-md flex items-center gap-1.5">
+          🎮 El Juego
+        </button>
+        <button id="tab-sim" onclick="switchTab('sim')" class="px-4 py-1.5 rounded-full font-medium transition text-slate-400 hover:text-slate-200 flex items-center gap-1.5 opacity-60 cursor-not-allowed" title="Bloqueado hasta jugar al menos 2 partidas">
+          <i id="sim-lock-icon" data-lucide="lock" class="w-3.5 h-3.5"></i> 📊 Simulador
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Contenido Principal -->
+  <main class="flex-1 max-w-6xl w-full mx-auto p-4 md:p-6 flex flex-col gap-6">
+    
+    <!-- Alerta de Bloqueo Temporal (Custom Modal/Notificación) -->
+    <div id="unlock-warning" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div id="unlock-modal" class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-5 text-center transition-colors duration-300">
+        <div class="w-14 h-14 bg-indigo-500/10 text-indigo-400 rounded-full flex items-center justify-center mx-auto border border-indigo-500/30">
+          <i data-lucide="lock" class="w-7 h-7"></i>
+        </div>
+        <div class="space-y-2">
+          <h4 class="text-xl font-bold text-white" id="unlock-title">Boxes Cerrados</h4>
+          <p class="text-sm text-slate-400" id="unlock-desc">
+            Deberán jugar al menos <strong class="text-indigo-400">dos partidas</strong> con su grupo para poder desbloquear el simulador de pista rápida.
+          </p>
+        </div>
+        <div class="bg-indigo-950/60 border border-indigo-900 p-3 rounded-2xl text-xs font-bold text-indigo-300" id="warning-progress-label">
+          Progreso actual: 0 partidas jugadas
+        </div>
+        <button onclick="closeUnlockWarning()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl transition shadow-lg shadow-indigo-600/30">
+          Volver a la pista
+        </button>
+      </div>
+    </div>
+    
+    <!-- PESTAÑA: JUEGO -->
+    <div id="game-tab-content" class="space-y-6">
+      
+      <!-- FASE 1: REGLAS Y CONSIGNAS -->
+      <section id="rules-card" class="bg-slate-900 rounded-2xl p-6 shadow-xl border border-slate-800 transition-colors duration-300">
+        <div class="flex items-start gap-4">
+          <div class="bg-indigo-500/10 text-indigo-400 p-3 rounded-2xl border border-indigo-500/20 shrink-0">
+            <i data-lucide="flag" class="w-6 h-6"></i>
+          </div>
+          <div class="space-y-3">
+            <span class="bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 font-semibold px-2.5 py-0.5 rounded-full text-xs uppercase tracking-wider">Instrucciones de Carrera</span>
+            <h2 class="text-2xl font-bold text-white" id="rules-title">Reglamento del juego</h2>
+            
+            <div class="text-slate-400 text-sm space-y-2 leading-relaxed" id="rules-list-container">
+              <p>
+                En grupos de 4 integrantes, cada uno deberá elegir una ficha del 2 al 12.
+              </p>
+              <ul class="list-disc pl-5 space-y-1.5 font-medium text-slate-300">
+                <li>Lanzaremos dos dados tradicionales, sumaremos los resultados y los registraremos.</li>
+                <li>El auto que tenga ese número avanzará un casillero.</li>
+                <li><span class="text-yellow-500 font-bold">¡Atención!</span> Solo los 4 autos elegidos por el grupo correrán en el tablero y avanzarán cuando salga su número.</li>
+                <li>Si sale un número de un auto que nadie eligió, se registrará en las estadísticas pero <strong>no avanzará en la pista</strong>.</li>
+                <li>Ganará el primero en llegar a la meta (completar los 5 casilleros de su pista).</li>
+                <li>Para completar la investigación, deberán jugar al menos dos partidas.</li>
+              </ul>
+              <p class="font-semibold text-indigo-400">
+                Después de jugar dos partidas, deberán decidir y justificar cuál consideran que es el mejor número para elegir en el juego.
+              </p>
+            </div>
+            
+            <div class="pt-2 flex items-center justify-between">
+              <span class="text-xs text-slate-300 font-bold bg-slate-950 px-3 py-2 rounded-xl border border-slate-800 flex items-center gap-1.5" id="counter-badge">
+                <i data-lucide="trophy" class="w-4 h-4 text-indigo-400"></i> Partidas Jugadas: <span id="game-counter" class="text-sm font-bold text-white">0</span>
+              </span>
+              <button onclick="collapseRules()" class="text-xs text-slate-500 hover:text-indigo-400 font-medium underline flex items-center gap-1 transition">
+                Ocultar reglamento <i data-lucide="chevron-up" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FASE 2: SELECCIÓN DE AUTOS -->
+      <section id="selection-screen" class="bg-slate-900 rounded-2xl p-6 shadow-xl border border-slate-800 text-center space-y-6 transition-colors duration-300">
+        <div class="space-y-1">
+          <h3 class="text-xl font-bold text-white animate-pulse" id="selection-title">Elegir Auto para la Carrera</h3>
+          <p class="text-xs text-slate-400" id="selection-desc">Cada integrante debe seleccionar exactamente 1 auto del panel (4 autos en total por mesa).</p>
+        </div>
+
+        <div id="car-selection-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-11 gap-3 max-w-5xl mx-auto">
+          <!-- Generado dinámicamente con JS -->
+        </div>
+
+        <div class="pt-5 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 max-w-5xl mx-auto" id="selection-footer">
+          <div class="text-left">
+            <p id="selection-count" class="text-sm font-semibold text-slate-300">Integrantes listos: 0 / 4</p>
+            <p class="text-xs text-slate-500">Cada piloto debe elegir un auto con un número diferente.</p>
+          </div>
+          <button id="start-game-btn" disabled onclick="startGame()" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 px-8 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2">
+            Iniciar Motores <i data-lucide="play" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </section>
+
+      <!-- FASE 3: PISTA DE CARRERAS Y AREA DE LANZAMIENTO -->
+      <section id="race-screen" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Tablero de Carreras (Pistas) -->
+        <div class="lg:col-span-8 bg-slate-900 rounded-2xl p-5 shadow-xl border border-slate-800 flex flex-col justify-between transition-colors duration-300" id="race-card">
+          <div>
+            <div class="flex justify-between items-center mb-4 border-b border-slate-800 pb-3" id="race-card-header">
+              <h3 class="font-bold text-white flex items-center gap-2" id="race-title">
+                <span class="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse"></span> Grilla de Competencia (Meta: 5 Casillas)
+              </h3>
+              <span id="current-race-indicator" class="text-xs font-bold text-indigo-400 bg-indigo-950/80 px-2.5 py-1 rounded-md border border-indigo-900">Carrera actual: 1</span>
+            </div>
+            
+            <!-- Contenedor de las pistas de carrera (SOLO LOS SELECCIONADOS) -->
+            <div id="race-tracks-container" class="space-y-4 pr-2 py-2">
+              <!-- Generado dinámicamente -->
+            </div>
+          </div>
+          
+          <div class="mt-4 pt-3 border-t border-slate-800 flex flex-col gap-1 text-xs text-slate-400" id="race-card-footer">
+            <span class="flex items-center gap-1.5"><i data-lucide="info" class="w-4 h-4 text-indigo-400"></i> Solo avanzan las pistas de los números elegidos por el grupo.</span>
+            <span>🏁 La meta es la línea cuadriculada final</span>
+          </div>
+        </div>
+
+        <!-- Lanzamiento y Estadísticas En Vivo -->
+        <div class="lg:col-span-4 flex flex-col gap-6">
+          
+          <!-- Los Dados -->
+          <div class="bg-slate-900 text-white rounded-2xl p-6 shadow-xl border border-slate-800 flex flex-col items-center justify-center text-center relative overflow-hidden transition-colors duration-300" id="dice-card">
+            <div class="absolute inset-0 bg-gradient-to-tr from-slate-950 to-indigo-950 opacity-90" id="dice-card-gradient"></div>
+            
+            <div class="relative z-10 space-y-4 w-full">
+              <span class="text-xs font-bold uppercase tracking-widest text-indigo-400">Torre de Dados</span>
+              
+              <div class="flex justify-center gap-5 my-2">
+                <!-- Dado 1 -->
+                <div id="die-1" class="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-5xl font-extrabold text-slate-950 shadow-2xl transition-transform border-2 border-indigo-400">
+                  ⚀
+                </div>
+                <!-- Dado 2 -->
+                <div id="die-2" class="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-5xl font-extrabold text-slate-950 shadow-2xl transition-transform border-2 border-indigo-400">
+                  ⚀
+                </div>
+              </div>
+
+              <div class="space-y-1">
+                <p id="roll-sum-display" class="text-3xl font-black text-amber-400 drop-shadow">Suma: --</p>
+                <p id="roll-action-comment" class="text-xs text-slate-400 min-h-[32px] flex items-center justify-center">¡Presiona el acelerador para lanzar!</p>
+              </div>
+
+              <button id="roll-btn" onclick="rollDice()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 px-6 rounded-xl transition-all shadow-lg shadow-indigo-600/30 active:scale-95 flex items-center justify-center gap-2 text-base border border-indigo-400/30">
+                <i data-lucide="zap" class="w-5 h-5"></i> ¡Lanzar Dados!
+              </button>
+            </div>
+          </div>
+
+          <!-- Tabla de Historial Corto -->
+          <div class="bg-slate-900 rounded-2xl p-5 shadow-xl border border-slate-800 flex-1 flex flex-col transition-colors duration-300" id="history-card">
+            <h4 class="text-sm font-bold text-white mb-2 flex items-center justify-between" id="history-title">
+              <span>Registro de Giros</span>
+              <span id="rolls-total-count" class="text-xs font-semibold text-slate-400 bg-slate-950 px-2.5 py-1 rounded-full border border-slate-800">0 vueltas</span>
+            </h4>
+            
+            <div class="overflow-y-auto max-h-48 border border-slate-800 rounded-xl flex-1 bg-slate-950" id="history-table-container">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead class="bg-slate-900 text-slate-400 font-bold sticky top-0 border-b border-slate-800" id="history-table-header">
+                  <tr>
+                    <th class="p-2">Tirada</th>
+                    <th class="p-2 text-center">Dado 1</th>
+                    <th class="p-2 text-center">Dado 2</th>
+                    <th class="p-2 text-center">Suma</th>
+                  </tr>
+                </thead>
+                <tbody id="rolls-history-body" class="divide-y divide-slate-900 text-slate-300">
+                  <!-- Se rellena con JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- FASE 4: RESULTADOS, CONFLICTO COGNITIVO Y REFLEXIÓN -->
+      <section id="results-screen" class="hidden space-y-6">
+        <div class="bg-slate-900 rounded-2xl p-6 shadow-xl border border-slate-800 max-w-3xl mx-auto space-y-6 transition-colors duration-300" id="results-card">
+          <div class="text-center space-y-3">
+            <span class="text-6xl animate-bounce inline-block">🏆</span>
+            <h2 id="winner-text" class="text-3xl font-black text-white bg-gradient-to-r from-amber-400 to-yellow-200 bg-clip-text text-transparent">¡El Auto ha ganado la carrera!</h2>
+            <p id="winner-subtext" class="text-sm text-slate-400">La carrera se completó en un total de 24 lanzamientos de dados.</p>
+          </div>
+
+          <!-- Gráfico de distribución de esta partida -->
+          <div class="space-y-3 bg-slate-950 p-4 rounded-2xl border border-slate-800" id="chart-wrapper">
+            <h4 class="text-sm font-bold text-slate-300" id="chart-title">Resultados registrados en esta carrera:</h4>
+            <div id="bar-chart" class="flex items-end gap-1.5 h-36 border-b border-slate-800 pb-1 pt-4 px-2">
+              <!-- Barras generadas dinámicamente -->
+            </div>
+            <div class="grid grid-cols-11 text-center text-[10px] font-bold text-slate-400 px-2">
+              <span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span>
+            </div>
+          </div>
+
+          <!-- Pregunta Reflexiva para la Hoja de Trabajo (Dinámica basada en el número de partida) -->
+          <div class="bg-indigo-950/40 border-l-4 border-indigo-500 rounded-r-xl p-5 space-y-2" id="reflection-card">
+            <h4 class="text-sm font-bold text-indigo-300 flex items-center gap-1.5">
+              <i data-lucide="pencil" class="w-5 h-5"></i> Registro en la Carpeta
+            </h4>
+            <p id="reflection-instruction" class="text-sm text-indigo-200 leading-relaxed font-semibold">
+              En su hoja de trabajo, decidan en equipo y justifiquen: ¿Cuál consideran que es el mejor número para elegir en el juego?
+            </p>
+          </div>
+
+          <div class="pt-4 flex flex-col sm:flex-row gap-4 justify-between items-center">
+            <button onclick="newGame()" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-white font-semibold py-3 px-6 rounded-xl transition-all text-sm flex items-center justify-center gap-2">
+              <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Volver a Jugar (Siguiente partida)
+            </button>
+            <button id="goto-sim-btn" disabled onclick="switchTab('sim')" class="w-full sm:w-auto bg-indigo-500/50 text-white font-bold py-3.5 px-6 rounded-xl transition-all text-sm flex items-center justify-center gap-2 cursor-not-allowed opacity-40">
+              Ir al simulador <i data-lucide="lock" class="w-4 h-4" id="goto-sim-icon"></i>
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- PESTAÑA: SIMULACIÓN (Bloqueada por default) -->
+    <div id="sim-tab-content" class="hidden space-y-6">
+      <div class="bg-slate-900 rounded-2xl p-6 shadow-xl border border-slate-800 transition-colors duration-300" id="sim-main-card">
+        <div class="max-w-4xl mx-auto space-y-6 text-center">
+          <div class="space-y-2">
+            <span class="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold px-3 py-1 rounded-full text-xs uppercase tracking-wider">Laboratorio Desbloqueado</span>
+            <h2 class="text-3xl font-bold text-white" id="sim-title">Simulador de Grandes Números</h2>
+            <p class="text-sm text-slate-400 max-w-xl mx-auto" id="sim-desc">
+              ¿Qué pasaría si corriéramos esta carrera miles de veces en un instante con un tablero gigante de 1.000 o 5.000 casillas? El simulador les permite recrear infinidad de juegos para analizar el comportamiento físico de los dados.
+            </p>
+          </div>
+
+          <div class="p-4 bg-slate-950 rounded-xl border border-slate-800 flex flex-wrap justify-center items-center gap-3" id="sim-actions-panel">
+            <span class="text-xs font-bold text-slate-300">Elegir cantidad de carreras virtuales a simular:</span>
+            <div class="flex gap-2">
+              <button onclick="runSimulation(10)" class="bg-indigo-600 hover:bg-indigo-550 text-white font-bold py-2 px-4 rounded-lg text-sm transition-all active:scale-95">10</button>
+              <button onclick="runSimulation(100)" class="bg-indigo-600 hover:bg-indigo-550 text-white font-bold py-2 px-4 rounded-lg text-sm transition-all active:scale-95">100</button>
+              <button onclick="runSimulation(500)" class="bg-indigo-600 hover:bg-indigo-550 text-white font-bold py-2 px-4 rounded-lg text-sm transition-all active:scale-95">500</button>
+              <button onclick="runSimulation(1000)" class="bg-indigo-600 hover:bg-indigo-550 text-white font-bold py-2 px-4 rounded-lg text-sm transition-all active:scale-95">1.000</button>
+              <button onclick="runSimulation(5000)" class="bg-indigo-600 hover:bg-indigo-550 text-white font-bold py-2 px-4 rounded-lg text-sm transition-all active:scale-95">5.000</button>
+            </div>
+          </div>
+
+          <!-- Resultados de simulación -->
+          <div id="sim-results-card" class="hidden space-y-6 pt-4 border-t border-slate-800 text-left">
+            <h3 class="font-bold text-white text-center" id="sim-results-title">Resultados de Carreras Ganadas por cada Auto</h3>
+            
+            <div class="space-y-2 bg-slate-950 p-4 rounded-2xl border border-slate-800" id="sim-chart-wrapper">
+              <div id="sim-chart" class="flex items-end gap-1.5 h-44 border-b border-slate-800 pb-1 pt-4 px-2">
+                <!-- Barras de simulación -->
+              </div>
+              <div class="grid grid-cols-11 text-center text-[10px] font-bold text-slate-400 px-2">
+                <span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span>
+              </div>
+            </div>
+
+            <!-- Tabla de victorias -->
+            <div class="overflow-x-auto border border-slate-800 rounded-xl bg-slate-950" id="sim-table-wrapper">
+              <table class="w-full text-center text-xs">
+                <thead>
+                  <tr id="sim-table-headers" class="bg-slate-900 text-slate-400 font-bold border-b border-slate-800"></tr>
+                </thead>
+                <tbody>
+                  <tr id="sim-table-values" class="text-slate-300"></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Panel de Análisis Grupal para los Alumnos (Puramente observacional) -->
+            <div class="bg-emerald-500/10 border-l-4 border-emerald-500 rounded-r-xl p-5 space-y-2" id="sim-observation-panel">
+              <h4 class="text-sm font-bold text-emerald-300 flex items-center gap-1.5">
+                <i data-lucide="trending-up" class="text-emerald-400"></i> Observando la Tendencia Experimental
+              </h4>
+              <p class="text-xs text-slate-300 leading-relaxed" id="sim-observation-text">
+                Al simular miles de carreras utilizando este tablero gigante virtual, se puede apreciar de forma estable la frecuencia real de victorias de cada uno de los números del 2 al 12.
+              </p>
+              <p class="text-xs text-emerald-300 font-semibold" id="sim-observation-footer">
+                👉 Observen cómo se estabilizan las victorias a medida que aumentamos los lanzamientos virtuales. ¿Qué conclusiones pueden sacar sobre este comportamiento?
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer id="app-footer" class="bg-slate-950 border-t border-slate-900 text-slate-500 text-center py-5 text-xs mt-8 transition-colors duration-300">
+    <p>Desafío Didáctico Matemático para Secundaria &copy; 2026. Diseñado para explorar regularidades y formular ideas.</p>
+  </footer>
+
+  <script>
+    // Configuración didáctica y estética
+    const TRACK_LENGTH = 5;
+    const CAR_COLORS = [
+      '#f43f5e', // 2 (Rosa fuerte)
+      '#f97316', // 3 (Naranja)
+      '#eab308', // 4 (Amarillo)
+      '#84cc16', // 5 (Verde lima)
+      '#10b981', // 6 (Esmeralda)
+      '#6366f1', // 7 (Índigo estelar)
+      '#06b6d4', // 8 (Cian)
+      '#3b82f6', // 9 (Azul deportivo)
+      '#a855f7', // 10 (Púrpura)
+      '#ec4899', // 11 (Rosa vibrante)
+      '#ef4444'  // 12 (Rojo carrera)
+    ];
+    const DICE_FACES = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+
+    // Estados globales
+    let isMuted = false;
+    let isDarkMode = true;
+
+    // Estado del juego
+    let selectedCars = [];
+    let carPositions = {};
+    let rollHistory = [];
+    let isGameOver = false;
+    let gamesCounter = 0;
+
+    // SISTEMA DE AUDIO DIGITAL SINTETIZADO LAZY (Web Audio API se inicia al interactuar)
+    let audioCtx = null;
+
+    function playSound(type) {
+      if (isMuted) return;
+      
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        // Reanudar contexto de audio si estuviera pausado
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+
+        const time = audioCtx.currentTime;
+
+        if (type === 'click') {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(600, time);
+          osc.frequency.exponentialRampToValueAtTime(150, time + 0.08);
+          gain.gain.setValueAtTime(0.08, time);
+          gain.gain.linearRampToValueAtTime(0.01, time + 0.08);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(time);
+          osc.stop(time + 0.08);
+        }
+        
+        else if (type === 'dice') {
+          // Ruido rítmico de dados rodando
+          for (let i = 0; i < 6; i++) {
+            const hitTime = time + (i * 0.08);
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(140 + Math.random() * 160, hitTime);
+            gain.gain.setValueAtTime(0.12, hitTime);
+            gain.gain.linearRampToValueAtTime(0.005, hitTime + 0.05);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(hitTime);
+            osc.stop(hitTime + 0.06);
+          }
+        }
+        
+        else if (type === 'rev') {
+          // SÍNTESIS DE MOTOR DE CARRERAS ("VRRROOOM!") DE ALTA FIDELIDAD
+          const osc1 = audioCtx.createOscillator();
+          const osc2 = audioCtx.createOscillator();
+          const gainNode = audioCtx.createGain();
+          const filter = audioCtx.createBiquadFilter();
+          
+          osc1.type = 'sawtooth';
+          osc2.type = 'triangle'; 
+          
+          osc1.frequency.setValueAtTime(150, time);
+          osc1.frequency.exponentialRampToValueAtTime(800, time + 0.15); 
+          osc1.frequency.exponentialRampToValueAtTime(300, time + 0.4);  
+
+          osc2.frequency.setValueAtTime(152, time);
+          osc2.frequency.exponentialRampToValueAtTime(810, time + 0.15);
+          osc2.frequency.exponentialRampToValueAtTime(305, time + 0.4);
+
+          const highpass = audioCtx.createBiquadFilter();
+          highpass.type = 'highpass';
+          highpass.frequency.setValueAtTime(180, time);
+
+          filter.type = 'bandpass';
+          filter.Q.value = 3.0;
+          filter.frequency.setValueAtTime(300, time);
+          filter.frequency.exponentialRampToValueAtTime(2000, time + 0.15);
+          filter.frequency.exponentialRampToValueAtTime(600, time + 0.4);
+
+          gainNode.gain.setValueAtTime(0.01, time);
+          gainNode.gain.linearRampToValueAtTime(0.15, time + 0.08);
+          gainNode.gain.exponentialRampToValueAtTime(0.001, time + 0.45);
+
+          osc1.connect(highpass);
+          osc2.connect(highpass);
+          highpass.connect(filter);
+          filter.connect(gainNode);
+          gainNode.connect(audioCtx.destination);
+
+          osc1.start(time);
+          osc2.start(time);
+          osc1.stop(time + 0.45);
+          osc2.stop(time + 0.45);
+        }
+        
+        else if (type === 'victory') {
+          // Melodía corta alegre retro chiptune
+          const notes = [261.63, 329.63, 392.00, 523.25, 392.00, 523.25, 659.25, 783.99];
+          const tempo = 0.09;
+          notes.forEach((freq, idx) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0.08, time + idx * tempo);
+            gain.gain.linearRampToValueAtTime(0.001, time + idx * tempo + tempo * 1.5);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(time + idx * tempo);
+            osc.stop(time + idx * tempo + tempo * 1.5);
+          });
+        }
+      } catch (err) {
+        console.warn("Audio Context bloqueado o no soportado en este dispositivo");
+      }
+    }
+
+    // CONTROL DE MUTE
+    function toggleMute() {
+      isMuted = !isMuted;
+      const icon = document.getElementById('mute-icon');
+      if (isMuted) {
+        icon.setAttribute('data-lucide', 'volume-x');
+        document.getElementById('mute-btn').classList.replace('text-indigo-400', 'text-slate-500');
+      } else {
+        icon.setAttribute('data-lucide', 'volume-2');
+        document.getElementById('mute-btn').classList.replace('text-slate-500', 'text-indigo-400');
+        playSound('click');
+      }
+      lucide.createIcons();
+    }
+
+    // CONTROL DE TEMA CLARO/OSCURO (Ideal para Proyector del Aula)
+    function toggleTheme() {
+      isDarkMode = !isDarkMode;
+      applyTheme();
+      playSound('click');
+    }
+
+    function applyTheme() {
+      const body = document.getElementById('app-body');
+      const header = document.getElementById('app-header');
+      const footer = document.getElementById('app-footer');
+      const rules = document.getElementById('rules-card');
+      const selectScreen = document.getElementById('selection-screen');
+      const raceCard = document.getElementById('race-card');
+      const diceCard = document.getElementById('dice-card');
+      const historyCard = document.getElementById('history-card');
+      const resultsCard = document.getElementById('results-card');
+      const simMainCard = document.getElementById('sim-main-card');
+      const themeIcon = document.getElementById('theme-icon');
+      const themeBtn = document.getElementById('theme-btn');
+
+      if (isDarkMode) {
+        // MODO OSCURO
+        body.className = "min-h-screen text-slate-100 flex flex-col bg-slate-950 transition-colors duration-300";
+        header.className = "bg-slate-900 border-b border-slate-800 text-white shadow-xl px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 transition-colors duration-300";
+        footer.className = "bg-slate-950 border-t border-slate-900 text-slate-500 text-center py-5 text-xs mt-8 transition-colors duration-300";
+        
+        themeIcon.setAttribute('data-lucide', 'sun');
+        themeBtn.className = "p-2 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-xl transition flex items-center justify-center border border-slate-700 shadow-md";
+
+        // Tarjetas
+        const darkCards = [rules, selectScreen, raceCard, diceCard, historyCard, resultsCard, simMainCard];
+        darkCards.forEach(card => {
+          if(card) {
+            card.classList.remove('bg-white', 'border-slate-300', 'shadow-md');
+            card.classList.add('bg-slate-900', 'border-slate-800', 'shadow-xl');
+          }
+        });
+
+        // Textos específicos del modo oscuro
+        document.getElementById('header-sub').className = "text-xs text-slate-400";
+        document.getElementById('rules-title').className = "text-2xl font-bold text-white";
+        document.getElementById('rules-list-container').className = "text-slate-400 text-sm space-y-2 leading-relaxed";
+        document.getElementById('selection-title').className = "text-xl font-bold text-white animate-pulse";
+        document.getElementById('selection-desc').className = "text-xs text-slate-400";
+        document.getElementById('selection-count').className = "text-sm font-semibold text-slate-300";
+        document.getElementById('race-title').className = "font-bold text-white flex items-center gap-2";
+        document.getElementById('rolls-total-count').className = "text-xs font-semibold text-slate-400 bg-slate-950 px-2.5 py-1 rounded-full border border-slate-800";
+        document.getElementById('rolls-total-count').parentElement.className = "text-sm font-bold text-white mb-2 flex items-center justify-between";
+        document.getElementById('history-table-container').className = "overflow-y-auto max-h-48 border border-slate-800 rounded-xl flex-1 bg-slate-950";
+        document.getElementById('history-table-header').className = "bg-slate-900 text-slate-400 font-bold sticky top-0 border-b border-slate-800";
+        document.getElementById('chart-wrapper').className = "space-y-3 bg-slate-950 p-4 rounded-2xl border border-slate-800";
+        document.getElementById('chart-title').className = "text-sm font-bold text-slate-300";
+        document.getElementById('sim-title').className = "text-3xl font-bold text-white";
+        document.getElementById('sim-desc').className = "text-sm text-slate-400 max-w-xl mx-auto";
+        document.getElementById('sim-actions-panel').className = "p-4 bg-slate-950 rounded-xl border border-slate-800 flex flex-wrap justify-center items-center gap-3";
+        
+        const simResultsTitle = document.getElementById('sim-results-title');
+        if(simResultsTitle) simResultsTitle.className = "font-bold text-white text-center";
+        
+        const simChartWrapper = document.getElementById('sim-chart-wrapper');
+        if(simChartWrapper) simChartWrapper.className = "space-y-2 bg-slate-950 p-4 rounded-2xl border border-slate-800";
+        
+        const simTableWrapper = document.getElementById('sim-table-wrapper');
+        if(simTableWrapper) simTableWrapper.className = "overflow-x-auto border border-slate-800 rounded-xl bg-slate-950";
+        
+        const simObservationPanel = document.getElementById('sim-observation-panel');
+        if(simObservationPanel) {
+          simObservationPanel.className = "bg-emerald-500/10 border-l-4 border-emerald-500 rounded-r-xl p-5 space-y-2";
+          document.getElementById('sim-observation-text').className = "text-xs text-slate-300 leading-relaxed";
+          document.getElementById('sim-observation-footer').className = "text-xs text-emerald-300 font-semibold";
+        }
+
+        // Navegación
+        document.getElementById('app-tabs-nav').className = "flex bg-slate-950 p-1 rounded-full text-sm border border-slate-800";
+        document.getElementById('unlock-modal').className = "bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-5 text-center transition-colors duration-300";
+        document.getElementById('unlock-title').className = "text-xl font-bold text-white";
+        document.getElementById('unlock-desc').className = "text-sm text-slate-400";
+
+      } else {
+        // MODO CLARO
+        body.className = "min-h-screen text-slate-900 flex flex-col bg-slate-100 transition-colors duration-300";
+        header.className = "bg-white border-b border-slate-200 text-slate-800 shadow-md px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 transition-colors duration-300";
+        footer.className = "bg-white border-t border-slate-200 text-slate-500 text-center py-5 text-xs mt-8 transition-colors duration-300";
+        
+        themeIcon.setAttribute('data-lucide', 'moon');
+        themeBtn.className = "p-2 bg-slate-100 hover:bg-slate-250 text-indigo-600 rounded-xl transition flex items-center justify-center border border-slate-300 shadow-sm";
+
+        // Tarjetas
+        const lightCards = [rules, selectScreen, raceCard, diceCard, historyCard, resultsCard, simMainCard];
+        lightCards.forEach(card => {
+          if(card) {
+            card.classList.remove('bg-slate-900', 'border-slate-800', 'shadow-xl');
+            card.classList.add('bg-white', 'border-slate-200', 'shadow-md');
+          }
+        });
+
+        // Textos específicos del modo claro
+        document.getElementById('header-sub').className = "text-xs text-slate-500";
+        document.getElementById('rules-title').className = "text-2xl font-bold text-slate-900";
+        document.getElementById('rules-list-container').className = "text-slate-600 text-sm space-y-2 leading-relaxed";
+        document.getElementById('selection-title').className = "text-xl font-bold text-slate-900 animate-pulse";
+        document.getElementById('selection-desc').className = "text-xs text-slate-500";
+        document.getElementById('selection-count').className = "text-sm font-semibold text-slate-700";
+        document.getElementById('race-title').className = "font-bold text-slate-900 flex items-center gap-2";
+        document.getElementById('rolls-total-count').className = "text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200";
+        document.getElementById('rolls-total-count').parentElement.className = "text-sm font-bold text-slate-900 mb-2 flex items-center justify-between";
+        document.getElementById('history-table-container').className = "overflow-y-auto max-h-48 border border-slate-200 rounded-xl flex-1 bg-white";
+        document.getElementById('history-table-header').className = "bg-slate-100 text-slate-600 font-bold sticky top-0 border-b border-slate-200";
+        document.getElementById('chart-wrapper').className = "space-y-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-inner";
+        document.getElementById('chart-title').className = "text-sm font-bold text-slate-600";
+        document.getElementById('sim-title').className = "text-3xl font-bold text-slate-900";
+        document.getElementById('sim-desc').className = "text-sm text-slate-600 max-w-xl mx-auto";
+        document.getElementById('sim-actions-panel').className = "p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-wrap justify-center items-center gap-3";
+
+        const simResultsTitle = document.getElementById('sim-results-title');
+        if(simResultsTitle) simResultsTitle.className = "font-bold text-slate-900 text-center";
+
+        const simChartWrapper = document.getElementById('sim-chart-wrapper');
+        if(simChartWrapper) simChartWrapper.className = "space-y-2 bg-white p-4 rounded-2xl border border-slate-200 shadow-inner";
+
+        const simTableWrapper = document.getElementById('sim-table-wrapper');
+        if(simTableWrapper) simTableWrapper.className = "overflow-x-auto border border-slate-200 rounded-xl bg-white";
+
+        const simObservationPanel = document.getElementById('sim-observation-panel');
+        if(simObservationPanel) {
+          simObservationPanel.className = "bg-emerald-50 border-l-4 border-emerald-500 rounded-r-xl p-5 space-y-2";
+          document.getElementById('sim-observation-text').className = "text-xs text-slate-700 leading-relaxed";
+          document.getElementById('sim-observation-footer').className = "text-xs text-emerald-800 font-semibold";
+        }
+
+        // Navegación
+        document.getElementById('app-tabs-nav').className = "flex bg-slate-100 p-1 rounded-full text-sm border border-slate-300";
+        document.getElementById('unlock-modal').className = "bg-white border border-slate-200 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-5 text-center transition-colors duration-300";
+        document.getElementById('unlock-title').className = "text-xl font-bold text-slate-950";
+        document.getElementById('unlock-desc').className = "text-sm text-slate-600";
+      }
+
+      // Redibujar pistas y elementos estéticos
+      renderRaceTracks();
+      lucide.createIcons();
+    }
+
+    // Alternar pestañas del juego/simulador (con bloqueo de seguridad)
+    function switchTab(tabName) {
+      if (tabName === 'sim' && gamesCounter < 2) {
+        playSound('click');
+        showUnlockWarning();
+        return;
+      }
+
+      playSound('click');
+      const isGame = tabName === 'game';
+      document.getElementById('game-tab-content').classList.toggle('hidden', !isGame);
+      document.getElementById('sim-tab-content').classList.toggle('hidden', isGame);
+
+      // Clases del botón activo
+      const activeClass = "px-4 py-1.5 rounded-full font-medium transition bg-indigo-600 text-white shadow-md flex items-center gap-1.5";
+      const inactiveClass = isDarkMode 
+        ? "px-4 py-1.5 rounded-full font-medium transition text-slate-400 hover:text-slate-200 flex items-center gap-1.5"
+        : "px-4 py-1.5 rounded-full font-medium transition text-slate-600 hover:text-slate-800 flex items-center gap-1.5";
+
+      document.getElementById('tab-game').className = isGame ? activeClass : inactiveClass;
+      
+      const tabSimBtn = document.getElementById('tab-sim');
+      if (gamesCounter >= 2) {
+        tabSimBtn.className = !isGame ? activeClass : inactiveClass;
+        tabSimBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+      } else {
+        tabSimBtn.className = "px-4 py-1.5 rounded-full font-medium transition text-slate-400 opacity-60 cursor-not-allowed flex items-center gap-1.5";
+      }
+    }
+
+    // Mostrar advertencia de bloqueo
+    function showUnlockWarning() {
+      const warning = document.getElementById('unlock-warning');
+      document.getElementById('warning-progress-label').innerText = `Progreso actual: ${gamesCounter} de al menos 2 partidas jugadas.`;
+      warning.classList.remove('hidden');
+    }
+
+    // Cerrar advertencia de bloqueo
+    function closeUnlockWarning() {
+      playSound('click');
+      document.getElementById('unlock-warning').classList.add('hidden');
+    }
+
+    // Colapsar cartel de reglas
+    function collapseRules() {
+      playSound('click');
+      document.getElementById('rules-card').classList.add('hidden');
+    }
+
+    // Renderizar la grilla de selección de autos para los alumnos (DEBEN ELEGIR EXACTAMENTE 4 AUTOS)
+    function renderCarSelectionGrid() {
+      const container = document.getElementById('car-selection-grid');
+      if (!container) return;
+      container.innerHTML = '';
+      
+      for (let i = 2; i <= 12; i++) {
+        const color = CAR_COLORS[i - 2];
+        const isSelected = selectedCars.includes(i);
+        
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.onclick = () => selectCar(i);
+        
+        let cardStyle = "";
+        if (isDarkMode) {
+          cardStyle = isSelected 
+            ? 'bg-indigo-950/40 border-indigo-500 scale-105 shadow-lg shadow-indigo-500/20' 
+            : 'bg-slate-900 border-slate-800 hover:border-slate-700 hover:bg-slate-800/50';
+        } else {
+          cardStyle = isSelected 
+            ? 'bg-indigo-50 border-indigo-600 scale-105 shadow-lg shadow-indigo-600/25' 
+            : 'bg-white border-slate-200 hover:border-slate-400 hover:bg-slate-50';
+        }
+
+        card.className = `p-4 flex flex-col items-center justify-center rounded-2xl border-2 transition-all duration-300 group ${cardStyle}`;
+        
+        // Elemento visual del autito dentro de un círculo brillante de color para máxima legibilidad
+        card.innerHTML = `
+          <div class="w-14 h-14 rounded-full flex items-center justify-center mb-1 transition-transform duration-300 group-hover:scale-110 shadow-inner" 
+               style="background-color: ${color}20; border: 2px solid ${color}">
+            <span class="text-3xl">🏎️</span>
+          </div>
+          <span class="text-xl font-bold block mt-1" style="color: ${color}">${i}</span>
+          <span class="text-[9px] text-slate-500 uppercase font-black tracking-wider">${isSelected ? 'Listo' : 'Libre'}</span>
+        `;
+        
+        container.appendChild(card);
+      }
+      
+      // Actualizar contador y botón
+      document.getElementById('selection-count').innerText = `Integrantes listos: ${selectedCars.length} / 4`;
+      document.getElementById('start-game-btn').disabled = selectedCars.length !== 4;
+    }
+
+    // Evento de selección de autos
+    function selectCar(num) {
+      playSound('click');
+      if (selectedCars.includes(num)) {
+        selectedCars = selectedCars.filter(c => c !== num);
+      } else {
+        if (selectedCars.length < 4) {
+          selectedCars.push(num);
+        } else {
+          // Si ya eligió 4, quitamos el primero y agregamos este (cola)
+          selectedCars.shift();
+          selectedCars.push(num);
+        }
+      }
+      renderCarSelectionGrid();
+    }
+
+    // Iniciar carrera
+    function startGame() {
+      playSound('rev');
+      document.getElementById('selection-screen').classList.add('hidden');
+      document.getElementById('race-screen').classList.remove('hidden');
+      
+      // Reiniciar posiciones de todos los autos (2 al 12)
+      carPositions = {};
+      for (let i = 2; i <= 12; i++) {
+        carPositions[i] = 0;
+      }
+      
+      rollHistory = [];
+      isGameOver = false;
+      stopConfetti();
+      
+      document.getElementById('roll-btn').disabled = false;
+      document.getElementById('rolls-history-body').innerHTML = '';
+      document.getElementById('rolls-total-count').innerText = '0 vueltas';
+      
+      document.getElementById('die-1').innerText = '⚀';
+      document.getElementById('die-2').innerText = '⚀';
+      document.getElementById('roll-sum-display').innerText = 'Suma: --';
+      document.getElementById('roll-action-comment').innerText = '¡Que se enciendan los semáforos!';
+      
+      renderRaceTracks();
+    }
+
+    // Dibujar pistas de carrera (SOLO DE LOS 4 SELECCIONADOS)
+    function renderRaceTracks() {
+      const container = document.getElementById('race-tracks-container');
+      if (!container) return;
+      container.innerHTML = '';
+
+      // Ordenar los elegidos para mostrarlos de menor a mayor
+      const sortedSelected = [...selectedCars].sort((a,b) => a - b);
+
+      sortedSelected.forEach(i => {
+        const color = CAR_COLORS[i - 2];
+        const currentPos = carPositions[i];
+        
+        const trackRow = document.createElement('div');
+        
+        // Caja de pista con efecto de luz según tema
+        let rowThemeStyle = "";
+        if (isDarkMode) {
+          rowThemeStyle = "border-slate-800 bg-slate-950/40";
+        } else {
+          rowThemeStyle = "border-slate-200 bg-slate-50";
+        }
+        
+        trackRow.className = `flex items-center gap-2 p-3 rounded-2xl border ${rowThemeStyle} relative overflow-hidden transition-all duration-300`;
+        trackRow.style.boxShadow = `inset 0 0 10px ${color}05`;
+
+        // Celdas de la pista
+        let cellsHTML = '';
+        for (let cellIdx = 0; cellIdx <= TRACK_LENGTH; cellIdx++) {
+          const isCurrent = cellIdx === currentPos;
+          const isFilled = cellIdx < currentPos;
+          const isFinish = cellIdx === TRACK_LENGTH;
+          
+          let laneStyle = isDarkMode ? 'asphalt-dark' : 'asphalt-light';
+          
+          cellsHTML += `
+            <div class="flex-1 h-12 rounded-xl flex items-center justify-center relative overflow-hidden transition-all duration-300 ${
+              isFinish 
+                ? 'finish-line border-l-2 border-slate-700' 
+                : `${laneStyle} border-r border-dashed border-slate-200/20`
+            } ${isFilled ? 'shadow-inner' : ''}">
+              
+              <!-- Divisor central de asfalto -->
+              ${!isFinish ? '<div class="absolute inset-y-0 left-1/2 w-1 border-r-2 border-dashed border-yellow-500/30 pointer-events-none transform -translate-x-1/2"></div>' : ''}
+              
+              <!-- Marcadores estáticos de meta o inicio -->
+              ${cellIdx === 0 && !isCurrent ? '<i data-lucide="play" class="w-4 h-4 text-slate-500 relative z-10"></i>' : ''}
+              ${isFinish && !isCurrent ? '<span class="absolute text-slate-800/85 text-xs font-black z-10 tracking-widest uppercase">META</span>' : ''}
+              
+              <!-- El Auto de carreras -->
+              ${isCurrent ? `<span class="car-marker relative z-20 hover:scale-110">🏎️</span>` : ''}
+            </div>
+          `;
+        }
+
+        const pilotTextClass = isDarkMode ? "text-slate-500" : "text-slate-600";
+
+        trackRow.innerHTML = `
+          <div class="w-14 text-center pr-2 flex flex-col justify-center">
+            <span class="text-xl font-black block leading-none" style="color: ${color}">${i}</span>
+            <span class="text-[9px] font-bold ${pilotTextClass} uppercase tracking-wider mt-0.5">PILOTO</span>
+          </div>
+          <div class="flex-1 flex gap-2">
+            ${cellsHTML}
+          </div>
+        `;
+        
+        container.appendChild(trackRow);
+      });
+      lucide.createIcons();
+    }
+
+    // Tirar los dados individuales
+    function rollDice() {
+      if (isGameOver) return;
+
+      playSound('dice');
+      const btn = document.getElementById('roll-btn');
+      btn.disabled = true;
+
+      const d1 = Math.floor(Math.random() * 6) + 1;
+      const d2 = Math.floor(Math.random() * 6) + 1;
+      const sum = d1 + d2;
+
+      // Animaciones de giro
+      const die1El = document.getElementById('die-1');
+      const die2El = document.getElementById('die-2');
+      
+      die1El.className = 'w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-5xl font-extrabold text-slate-950 shadow-2xl border-2 border-indigo-400 dice-roll';
+      die2El.className = 'w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-5xl font-extrabold text-slate-950 shadow-2xl border-2 border-indigo-400 dice-roll';
+
+      die1El.innerText = DICE_FACES[d1 - 1];
+      die2El.innerText = DICE_FACES[d2 - 1];
+
+      setTimeout(() => {
+        die1El.classList.remove('dice-roll');
+        die2El.classList.remove('dice-roll');
+
+        // REGLA CLAVE: Solo avanza si el auto fue seleccionado
+        const isChosen = selectedCars.includes(sum);
+        let actionMessage = `Salió el ${sum}.`;
+
+        if (isChosen) {
+          playSound('rev');
+          if (carPositions[sum] < TRACK_LENGTH) {
+            carPositions[sum]++;
+          }
+          actionMessage += ` ¡El auto ${sum} acelera un casillero! 🏎️💨`;
+        } else {
+          actionMessage += ` (Nadie eligió el ${sum}, se registra pero no avanza ningún coche)`;
+        }
+
+        // Registrar lanzamiento
+        rollHistory.push({ d1, d2, sum });
+
+        // Actualizar UI
+        document.getElementById('roll-sum-display').innerText = `Suma: ${sum}`;
+        document.getElementById('roll-action-comment').innerText = actionMessage;
+        document.getElementById('rolls-total-count').innerText = `${rollHistory.length} vueltas`;
+        
+        renderRaceTracks();
+        appendRollToHistory(rollHistory.length, d1, d2, sum);
+
+        // Comprobar ganador (Solo puede ser uno de los elegidos ya que los otros no avanzan)
+        if (isChosen && carPositions[sum] >= TRACK_LENGTH) {
+          isGameOver = true;
+          setTimeout(() => endGameSequence(sum), 600);
+        } else {
+          btn.disabled = false;
+        }
+
+      }, 500);
+    }
+
+    // Añadir línea a la tabla de historial en vivo
+    function appendRollToHistory(index, d1, d2, sum) {
+      const tbody = document.getElementById('rolls-history-body');
+      const tr = document.createElement('tr');
+      tr.className = isDarkMode ? 'hover:bg-slate-900/50 transition-colors' : 'hover:bg-slate-100 transition-colors';
+      tr.innerHTML = `
+        <td class="p-2 font-semibold text-slate-400">#${index}</td>
+        <td class="p-2 text-center text-lg">${DICE_FACES[d1 - 1]} (${d1})</td>
+        <td class="p-2 text-center text-lg">${DICE_FACES[d2 - 1]} (${d2})</td>
+        <td class="p-2 text-center font-bold text-sm" style="color: ${CAR_COLORS[sum - 2]}">${sum}</td>
+      `;
+      tbody.insertBefore(tr, tbody.firstChild);
+    }
+
+    // Finalizar carrera
+    function endGameSequence(winner) {
+      playSound('victory');
+      startConfetti();
+      gamesCounter++;
+      document.getElementById('game-counter').innerText = `${gamesCounter}`;
+      
+      // Cambiar de pantalla
+      document.getElementById('race-screen').classList.add('hidden');
+      document.getElementById('results-screen').classList.remove('hidden');
+
+      // Título ganador con color de escudería
+      const winnerColor = CAR_COLORS[winner - 2];
+      document.getElementById('winner-text').innerHTML = `🏆 ¡El Auto <span style="color:${winnerColor}">${winner}</span> ha ganado la carrera!`;
+      document.getElementById('winner-subtext').innerText = `La carrera se resolvió en un total de ${rollHistory.length} lanzamientos de dados.`;
+
+      // Calcular frecuencias de esta partida
+      const frequencies = Array(13).fill(0);
+      rollHistory.forEach(r => {
+        frequencies[r.sum]++;
+      });
+
+      // Dibujar gráfico de barras para esta carrera
+      drawBarChart('bar-chart', frequencies);
+
+      // Determinar la pregunta reflexiva para la carpeta según el número de partida
+      const instructionEl = document.getElementById('reflection-instruction');
+      if (gamesCounter === 1) {
+        instructionEl.innerHTML = `En su hoja de trabajo, decidan en equipo y justifiquen: <strong>¿Cuál consideran que es el mejor número para elegir en el juego?</strong>`;
+      } else if (gamesCounter >= 2) {
+        instructionEl.innerHTML = `Para esta segunda carrera, <strong>¿cambiaron el número elegido u optaron por el mismo?</strong> Justifiquen los motivos de su decisión en su carpeta y expliquen qué diferencias o regularidades notaron entre ambas partidas.`;
+      }
+
+      // Si se completaron al menos 2 partidas, desbloquear el simulador masivo
+      if (gamesCounter >= 2) {
+        // Desbloquear navegación de pestaña del simulador
+        const tabSim = document.getElementById('tab-sim');
+        tabSim.classList.remove('opacity-60', 'cursor-not-allowed');
+        tabSim.title = "¡Desbloqueado! Ingresar al simulador masivo";
+        const lockIcon = document.getElementById('sim-lock-icon');
+        if (lockIcon) {
+          lockIcon.setAttribute('data-lucide', 'unlock');
+        }
+
+        // Habilitar botón de acceso rápido en los resultados
+        const gotoBtn = document.getElementById('goto-sim-btn');
+        gotoBtn.disabled = false;
+        gotoBtn.classList.remove('bg-indigo-500/50', 'opacity-40', 'cursor-not-allowed');
+        gotoBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-500', 'shadow-lg', 'shadow-indigo-600/30');
+        const gotoIcon = document.getElementById('goto-sim-icon');
+        if (gotoIcon) {
+          gotoIcon.setAttribute('data-lucide', 'arrow-right');
+        }
+      }
+      lucide.createIcons();
+    }
+
+    // Dibujar gráfico de barras genérico
+    function drawBarChart(canvasId, freqArray) {
+      const chartContainer = document.getElementById(canvasId);
+      if (!chartContainer) return;
+      chartContainer.innerHTML = '';
+
+      const maxVal = Math.max(...freqArray.slice(2));
+
+      for (let i = 2; i <= 12; i++) {
+        const val = freqArray[i];
+        const pctHeight = maxVal > 0 ? (val / maxVal) * 100 : 0;
+        const color = CAR_COLORS[i - 2];
+
+        const barColumn = document.createElement('div');
+        barColumn.className = 'flex-1 flex flex-col items-center justify-end h-full relative group';
+        barColumn.innerHTML = `
+          <!-- Tooltip flotante al pasar el mouse -->
+          <span class="absolute -top-7 bg-slate-850 text-white text-[9px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity z-20 border border-slate-700">${val} vueltas</span>
+          
+          <span class="text-[9px] font-bold text-slate-400 mb-0.5">${val}</span>
+          <div class="w-full rounded-t-md transition-all duration-500" style="height: ${pctHeight}%; background-color: ${color}; min-height: ${val > 0 ? '4px' : '1px'}; box-shadow: 0 0 8px ${color}60"></div>
+        `;
+        chartContainer.appendChild(barColumn);
+      }
+    }
+
+    // Reiniciar para una nueva partida (dejando la selección para mayor fluidez)
+    function newGame() {
+      playSound('click');
+      document.getElementById('results-screen').classList.add('hidden');
+      document.getElementById('selection-screen').classList.remove('hidden');
+      document.getElementById('race-screen').classList.add('hidden');
+      stopConfetti();
+      
+      renderCarSelectionGrid();
+      
+      document.getElementById('current-race-indicator').innerText = `Carrera actual: ${gamesCounter + 1}`;
+    }
+
+    // SIMULADOR MASIVO DE CARRERAS (En el simulador corren TODOS los autos del 2 al 12)
+    function runSimulation(runsCount) {
+      playSound('rev');
+      const victoryStats = Array(13).fill(0);
+
+      for (let run = 0; run < runsCount; run++) {
+        const virtualPositions = Array(13).fill(0);
+        let virtualWinner = null;
+
+        // Corren todos los números en el simulador
+        while (!virtualWinner) {
+          const d1 = Math.floor(Math.random() * 6) + 1;
+          const d2 = Math.floor(Math.random() * 6) + 1;
+          const sum = d1 + d2;
+
+          virtualPositions[sum]++;
+          if (virtualPositions[sum] >= TRACK_LENGTH) {
+            virtualWinner = sum;
+          }
+        }
+        victoryStats[virtualWinner]++;
+      }
+
+      // Dibujar en el simulador
+      document.getElementById('sim-results-card').classList.remove('hidden');
+      drawBarChart('sim-chart', victoryStats);
+
+      // Armar la tabla comparativa para todos los autos (2 al 12) - REMOVIDO EL PORCENTAJE
+      const headersRow = document.getElementById('sim-table-headers');
+      const valuesRow = document.getElementById('sim-table-values');
+
+      headersRow.innerHTML = '<th class="p-3 border-r border-slate-800 text-[10px] text-slate-400">Auto</th>';
+      valuesRow.innerHTML = '<td class="p-3 border-r border-slate-800 font-bold text-[10px] bg-slate-900/60">Victorias</td>';
+
+      for (let i = 2; i <= 12; i++) {
+        const color = CAR_COLORS[i - 2];
+
+        headersRow.innerHTML += `<th class="p-2 text-xs font-bold" style="color: ${color}">${i}</th>`;
+        valuesRow.innerHTML += `<td class="p-2 text-[10px]"><strong class="text-white text-sm block">${victoryStats[i]}</strong></td>`;
+      }
+    }
+
+    // SISTEMA MINI-CONFETI ANIMADO
+    let confettiActive = false;
+    let confettiParticles = [];
+    const confettiCanvas = document.getElementById('confetti-canvas');
+    const confettiCtx = confettiCanvas.getContext('2d');
+
+    function initConfetti() {
+      window.addEventListener('resize', resizeConfettiCanvas);
+      resizeConfettiCanvas();
+    }
+
+    function resizeConfettiCanvas() {
+      confettiCanvas.width = window.innerWidth;
+      confettiCanvas.height = window.innerHeight;
+    }
+
+    function startConfetti() {
+      confettiActive = true;
+      confettiParticles = [];
+      for (let i = 0; i < 120; i++) {
+        confettiParticles.push({
+          x: Math.random() * confettiCanvas.width,
+          y: Math.random() * confettiCanvas.height - confettiCanvas.height,
+          size: Math.random() * 8 + 5,
+          color: CAR_COLORS[Math.floor(Math.random() * CAR_COLORS.length)],
+          speedX: Math.random() * 4 - 2,
+          speedY: Math.random() * 5 + 3,
+          rotation: Math.random() * 360,
+          rotationSpeed: Math.random() * 4 - 2
+        });
+      }
+      animateConfetti();
+    }
+
+    // Asegurarse de detener la animación de confeti si la pestaña cambia
+    function stopConfetti() {
+      confettiActive = false;
+      if (confettiCtx) {
+        confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+      }
+    }
+
+    function animateConfetti() {
+      if (!confettiActive) return;
+      confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+
+      confettiParticles.forEach(p => {
+        p.y += p.speedY;
+        p.x += p.speedX;
+        p.rotation += p.rotationSpeed;
+
+        if (p.y > confettiCanvas.height) {
+          p.y = -20;
+          p.x = Math.random() * confettiCanvas.width;
+        }
+
+        confettiCtx.save();
+        confettiCtx.translate(p.x, p.y);
+        confettiCtx.rotate((p.rotation * Math.PI) / 180);
+        confettiCtx.fillStyle = p.color;
+        confettiCtx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+        confettiCtx.restore();
+      });
+
+      requestAnimationFrame(animateConfetti);
+    }
+
+    // INICIALIZACIÓN DIRECTA (Garantiza que corra en cualquier iframe/sandbox sin depender del evento load general)
+    function runInitialSetup() {
+      initConfetti();
+      renderCarSelectionGrid();
+      lucide.createIcons();
+    }
+
+    // Intentamos correrlo de inmediato y por seguridad también con listeners
+    runInitialSetup();
+    document.addEventListener('DOMContentLoaded', runInitialSetup);
+  </script>
+</body>
+</html>
