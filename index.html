@@ -73,6 +73,12 @@
       background: #475569;
       border-radius: 4px;
     }
+
+    /* Ajustes para que no se amontone en celulares */
+    @media (max-width: 480px) {
+      .car-marker { font-size: 1.2rem; }
+      #die-1, #die-2 { width: 3rem; height: 3rem; font-size: 1.75rem; }
+    }
   </style>
 </head>
 <body id="app-body" class="min-h-screen text-slate-100 flex flex-col bg-slate-950 transition-colors duration-300">
@@ -81,35 +87,35 @@
   <canvas id="confetti-canvas" class="pointer-events-none fixed inset-0 w-full h-full z-50"></canvas>
 
   <!-- Header / Barra de Navegación -->
-  <header id="app-header" class="bg-slate-900 border-b border-slate-800 text-white shadow-xl px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 transition-colors duration-300">
-    <div class="flex items-center gap-3">
-      <div class="bg-indigo-600 text-white p-2.5 rounded-xl shadow-lg shadow-indigo-500/30 animate-pulse">
-        <i data-lucide="zap" class="w-6 h-6"></i>
+  <header id="app-header" class="bg-slate-900 border-b border-slate-800 text-white shadow-xl px-4 py-3 sm:px-6 sm:py-4 flex flex-col md:flex-row justify-between items-center gap-3 sm:gap-4 transition-colors duration-300">
+    <div class="flex items-center gap-2.5 sm:gap-3">
+      <div class="bg-indigo-600 text-white p-2 sm:p-2.5 rounded-xl shadow-lg shadow-indigo-500/30 animate-pulse shrink-0">
+        <i data-lucide="zap" class="w-5 h-5 sm:w-6 sm:h-6"></i>
       </div>
       <div>
-        <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">Gran Carrera de Autos</h1>
-        <p class="text-xs text-slate-400" id="header-sub">¿Es cuestión de suerte, o de matemática?</p>
+        <h1 class="text-base sm:text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">Gran Carrera de Autos</h1>
+        <p class="text-[10px] sm:text-xs text-slate-400" id="header-sub">¿Es cuestión de suerte, o de matemática?</p>
       </div>
     </div>
     
     <!-- Controles de volumen, luces y pestañas -->
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
       <!-- Interruptor de Luces (Tema) -->
       <button onclick="toggleTheme()" id="theme-btn" class="p-2 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-xl transition flex items-center justify-center border border-slate-700 shadow-md" title="Alternar Modo Claro / Modo Oscuro">
-        <i id="theme-icon" data-lucide="sun" class="w-5 h-5"></i>
+        <i id="theme-icon" data-lucide="sun" class="w-4 h-4 sm:w-5 sm:h-5"></i>
       </button>
 
       <!-- Interruptor de Sonido -->
       <button onclick="toggleMute()" id="mute-btn" class="p-2 bg-slate-800 hover:bg-slate-700 text-indigo-400 rounded-xl transition flex items-center justify-center border border-slate-700 shadow-md" title="Silenciar/Activar Sonidos">
-        <i id="mute-icon" data-lucide="volume-2" class="w-5 h-5"></i>
+        <i id="mute-icon" data-lucide="volume-2" class="w-4 h-4 sm:w-5 sm:h-5"></i>
       </button>
 
       <!-- Pestañas de Navegación -->
-      <nav id="app-tabs-nav" class="flex bg-slate-950 p-1 rounded-full text-sm border border-slate-800">
-        <button id="tab-game" onclick="switchTab('game')" class="px-4 py-1.5 rounded-full font-medium transition bg-indigo-600 text-white shadow-md flex items-center gap-1.5">
+      <nav id="app-tabs-nav" class="flex bg-slate-950 p-1 rounded-full text-xs sm:text-sm border border-slate-800">
+        <button id="tab-game" onclick="switchTab('game')" class="px-2.5 sm:px-4 py-1.5 rounded-full font-medium transition bg-indigo-600 text-white shadow-md flex items-center gap-1 sm:gap-1.5 whitespace-nowrap">
           🎮 El Juego
         </button>
-        <button id="tab-sim" onclick="switchTab('sim')" class="px-4 py-1.5 rounded-full font-medium transition text-slate-400 hover:text-slate-200 flex items-center gap-1.5 opacity-60 cursor-not-allowed" title="Bloqueado hasta jugar al menos 2 partidas">
+        <button id="tab-sim" onclick="switchTab('sim')" class="px-2.5 sm:px-4 py-1.5 rounded-full font-medium transition text-slate-400 hover:text-slate-200 flex items-center gap-1 sm:gap-1.5 opacity-60 cursor-not-allowed whitespace-nowrap" title="Bloqueado hasta jugar al menos 2 partidas">
           <i id="sim-lock-icon" data-lucide="lock" class="w-3.5 h-3.5"></i> 📊 Simulador
         </button>
       </nav>
@@ -144,7 +150,7 @@
     <div id="game-tab-content" class="space-y-6">
       
       <!-- FASE 1: REGLAS Y CONSIGNAS -->
-      <section id="rules-card" class="bg-slate-900 rounded-2xl p-6 shadow-xl border border-slate-800 transition-colors duration-300">
+      <section id="rules-card" class="bg-slate-900 rounded-2xl p-4 sm:p-6 shadow-xl border border-slate-800 transition-colors duration-300">
         <div class="flex items-start gap-4">
           <div class="bg-indigo-500/10 text-indigo-400 p-3 rounded-2xl border border-indigo-500/20 shrink-0">
             <i data-lucide="flag" class="w-6 h-6"></i>
@@ -183,13 +189,13 @@
       </section>
 
       <!-- FASE 2: SELECCIÓN DE AUTOS -->
-      <section id="selection-screen" class="bg-slate-900 rounded-2xl p-6 shadow-xl border border-slate-800 text-center space-y-6 transition-colors duration-300">
+      <section id="selection-screen" class="bg-slate-900 rounded-2xl p-4 sm:p-6 shadow-xl border border-slate-800 text-center space-y-4 sm:space-y-6 transition-colors duration-300">
         <div class="space-y-1">
-          <h3 class="text-xl font-bold text-white animate-pulse" id="selection-title">Elegir Auto para la Carrera</h3>
+          <h3 class="text-lg sm:text-xl font-bold text-white animate-pulse" id="selection-title">Elegir Auto para la Carrera</h3>
           <p class="text-xs text-slate-400" id="selection-desc">Cada integrante debe seleccionar exactamente 1 auto del panel (4 autos en total por mesa).</p>
         </div>
 
-        <div id="car-selection-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-11 gap-3 max-w-5xl mx-auto">
+        <div id="car-selection-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-11 gap-2 sm:gap-3 max-w-5xl mx-auto">
           <!-- Generado dinámicamente con JS -->
         </div>
 
@@ -208,7 +214,7 @@
       <section id="race-screen" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         <!-- Tablero de Carreras (Pistas) -->
-        <div class="lg:col-span-8 bg-slate-900 rounded-2xl p-5 shadow-xl border border-slate-800 flex flex-col justify-between transition-colors duration-300" id="race-card">
+        <div class="lg:col-span-8 bg-slate-900 rounded-2xl p-3 sm:p-5 shadow-xl border border-slate-800 flex flex-col justify-between transition-colors duration-300" id="race-card">
           <div>
             <div class="flex justify-between items-center mb-4 border-b border-slate-800 pb-3" id="race-card-header">
               <h3 class="font-bold text-white flex items-center gap-2" id="race-title">
@@ -233,13 +239,13 @@
         <div class="lg:col-span-4 flex flex-col gap-6">
           
           <!-- Los Dados -->
-          <div class="bg-slate-900 text-white rounded-2xl p-6 shadow-xl border border-slate-800 flex flex-col items-center justify-center text-center relative overflow-hidden transition-colors duration-300" id="dice-card">
+          <div class="bg-slate-900 text-white rounded-2xl p-4 sm:p-6 shadow-xl border border-slate-800 flex flex-col items-center justify-center text-center relative overflow-hidden transition-colors duration-300" id="dice-card">
             <div class="absolute inset-0 bg-gradient-to-tr from-slate-950 to-indigo-950 opacity-90" id="dice-card-gradient"></div>
             
-            <div class="relative z-10 space-y-4 w-full">
+            <div class="relative z-10 space-y-3 sm:space-y-4 w-full">
               <span class="text-xs font-bold uppercase tracking-widest text-indigo-400">Torre de Dados</span>
               
-              <div class="flex justify-center gap-5 my-2">
+              <div class="flex justify-center gap-3 sm:gap-5 my-2">
                 <!-- Dado 1 -->
                 <div id="die-1" class="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-5xl font-extrabold text-slate-950 shadow-2xl transition-transform border-2 border-indigo-400">
                   ⚀
@@ -262,7 +268,7 @@
           </div>
 
           <!-- Tabla de Historial Corto -->
-          <div class="bg-slate-900 rounded-2xl p-5 shadow-xl border border-slate-800 flex-1 flex flex-col transition-colors duration-300" id="history-card">
+          <div class="bg-slate-900 rounded-2xl p-4 sm:p-5 shadow-xl border border-slate-800 flex-1 flex flex-col transition-colors duration-300" id="history-card">
             <h4 class="text-sm font-bold text-white mb-2 flex items-center justify-between" id="history-title">
               <span>Registro de Giros</span>
               <span id="rolls-total-count" class="text-xs font-semibold text-slate-400 bg-slate-950 px-2.5 py-1 rounded-full border border-slate-800">0 vueltas</span>
@@ -290,7 +296,7 @@
 
       <!-- FASE 4: RESULTADOS, CONFLICTO COGNITIVO Y REFLEXIÓN -->
       <section id="results-screen" class="hidden space-y-6">
-        <div class="bg-slate-900 rounded-2xl p-6 shadow-xl border border-slate-800 max-w-3xl mx-auto space-y-6 transition-colors duration-300" id="results-card">
+        <div class="bg-slate-900 rounded-2xl p-4 sm:p-6 shadow-xl border border-slate-800 max-w-3xl mx-auto space-y-6 transition-colors duration-300" id="results-card">
           <div class="text-center space-y-3">
             <span class="text-6xl animate-bounce inline-block">🏆</span>
             <h2 id="winner-text" class="text-3xl font-black text-white bg-gradient-to-r from-amber-400 to-yellow-200 bg-clip-text text-transparent">¡El Auto ha ganado la carrera!</h2>
@@ -780,16 +786,16 @@
             : 'bg-white border-slate-200 hover:border-slate-400 hover:bg-slate-50';
         }
 
-        card.className = `p-4 flex flex-col items-center justify-center rounded-2xl border-2 transition-all duration-300 group ${cardStyle}`;
+        card.className = `p-2 sm:p-4 flex flex-col items-center justify-center rounded-xl sm:rounded-2xl border-2 transition-all duration-300 group ${cardStyle}`;
         
         // Elemento visual del autito dentro de un círculo brillante de color para máxima legibilidad
         card.innerHTML = `
-          <div class="w-14 h-14 rounded-full flex items-center justify-center mb-1 transition-transform duration-300 group-hover:scale-110 shadow-inner" 
+          <div class="w-10 h-10 sm:w-14 sm:h-14 rounded-full flex items-center justify-center mb-1 transition-transform duration-300 group-hover:scale-110 shadow-inner" 
                style="background-color: ${color}20; border: 2px solid ${color}">
-            <span class="text-3xl">🏎️</span>
+            <span class="text-xl sm:text-3xl">🏎️</span>
           </div>
-          <span class="text-xl font-bold block mt-1" style="color: ${color}">${i}</span>
-          <span class="text-[9px] text-slate-500 uppercase font-black tracking-wider">${isSelected ? 'Listo' : 'Libre'}</span>
+          <span class="text-base sm:text-xl font-bold block mt-1" style="color: ${color}">${i}</span>
+          <span class="text-[8px] sm:text-[9px] text-slate-500 uppercase font-black tracking-wider">${isSelected ? 'Listo' : 'Libre'}</span>
         `;
         
         container.appendChild(card);
@@ -868,7 +874,7 @@
           rowThemeStyle = "border-slate-200 bg-slate-50";
         }
         
-        trackRow.className = `flex items-center gap-2 p-3 rounded-2xl border ${rowThemeStyle} relative overflow-hidden transition-all duration-300`;
+        trackRow.className = `flex items-center gap-1.5 sm:gap-2 p-2 sm:p-3 rounded-xl sm:rounded-2xl border ${rowThemeStyle} relative overflow-hidden transition-all duration-300`;
         trackRow.style.boxShadow = `inset 0 0 10px ${color}05`;
 
         // Celdas de la pista
@@ -881,7 +887,7 @@
           let laneStyle = isDarkMode ? 'asphalt-dark' : 'asphalt-light';
           
           cellsHTML += `
-            <div class="flex-1 h-12 rounded-xl flex items-center justify-center relative overflow-hidden transition-all duration-300 ${
+            <div class="flex-1 h-9 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center relative overflow-hidden transition-all duration-300 ${
               isFinish 
                 ? 'finish-line border-l-2 border-slate-700' 
                 : `${laneStyle} border-r border-dashed border-slate-200/20`
@@ -903,11 +909,11 @@
         const pilotTextClass = isDarkMode ? "text-slate-500" : "text-slate-600";
 
         trackRow.innerHTML = `
-          <div class="w-14 text-center pr-2 flex flex-col justify-center">
-            <span class="text-xl font-black block leading-none" style="color: ${color}">${i}</span>
-            <span class="text-[9px] font-bold ${pilotTextClass} uppercase tracking-wider mt-0.5">PILOTO</span>
+          <div class="w-8 sm:w-14 text-center pr-1 sm:pr-2 flex flex-col justify-center shrink-0">
+            <span class="text-base sm:text-xl font-black block leading-none" style="color: ${color}">${i}</span>
+            <span class="hidden sm:block text-[9px] font-bold ${pilotTextClass} uppercase tracking-wider mt-0.5">PILOTO</span>
           </div>
-          <div class="flex-1 flex gap-2">
+          <div class="flex-1 flex gap-1 sm:gap-2">
             ${cellsHTML}
           </div>
         `;
